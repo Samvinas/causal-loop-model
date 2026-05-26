@@ -1,0 +1,1130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Interactive Causal Loop Model — Tobacco Control</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: #f5f6fa;
+    color: #2d3436;
+    overflow: hidden;
+    height: 100vh;
+  }
+  header {
+    background: #fff;
+    border-bottom: 1px solid #dfe6e9;
+    padding: 10px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 56px;
+  }
+  header h1 {
+    font-size: 18px;
+    font-weight: 600;
+    color: #2d3436;
+  }
+  header .subtitle {
+    font-size: 13px;
+    color: #636e72;
+  }
+  header .attribution {
+    font-size: 11px;
+    color: #b2bec3;
+    text-align: right;
+  }
+
+  .main {
+    display: flex;
+    height: calc(100vh - 56px);
+  }
+
+  .canvas-wrap {
+    flex: 1;
+    position: relative;
+    background: #fff;
+    overflow: hidden;
+  }
+  canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  .panel {
+    width: 320px;
+    background: #fff;
+    border-left: 1px solid #dfe6e9;
+    overflow-y: auto;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .panel section {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 14px;
+  }
+  .panel section h3 {
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #636e72;
+    margin-bottom: 10px;
+  }
+  .panel p {
+    font-size: 13px;
+    line-height: 1.5;
+    color: #636e72;
+  }
+
+  .node-detail { display: none; }
+  .node-detail.active { display: block; }
+
+  .node-name {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 4px;
+    color: #2d3436;
+  }
+  .domain-badge {
+    display: inline-block;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: 500;
+    margin-bottom: 12px;
+  }
+
+  .value-display {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  .value-bar-track {
+    flex: 1;
+    height: 8px;
+    background: #dfe6e9;
+    border-radius: 4px;
+    position: relative;
+    overflow: hidden;
+  }
+  .value-bar-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.3s;
+  }
+  .value-pct {
+    font-size: 14px;
+    font-weight: 600;
+    min-width: 50px;
+    text-align: right;
+  }
+
+  .shock-control {
+    margin-bottom: 16px;
+  }
+  .shock-control label {
+    display: block;
+    font-size: 12px;
+    font-weight: 500;
+    color: #636e72;
+    margin-bottom: 6px;
+  }
+  .shock-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .shock-row input[type="range"] {
+    flex: 1;
+    accent-color: #6c5ce7;
+  }
+  .shock-value {
+    font-size: 13px;
+    font-weight: 600;
+    min-width: 36px;
+    text-align: center;
+  }
+
+  .connections-list {
+    max-height: 220px;
+    overflow-y: auto;
+  }
+  .conn-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 0;
+    font-size: 12px;
+    border-bottom: 1px solid #eee;
+  }
+  .conn-item:last-child { border-bottom: none; }
+  .conn-polarity {
+    font-weight: 700;
+    font-size: 14px;
+    width: 16px;
+    text-align: center;
+  }
+  .conn-polarity.pos { color: #00b894; }
+  .conn-polarity.neg { color: #d63031; }
+  .conn-name {
+    flex: 1;
+    color: #2d3436;
+    cursor: pointer;
+  }
+  .conn-name:hover { text-decoration: underline; }
+  .conn-weight {
+    width: 50px;
+  }
+  .conn-weight input {
+    width: 100%;
+    accent-color: #636e72;
+  }
+
+  .scenarios-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .scenario-btn {
+    display: block;
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #dfe6e9;
+    border-radius: 6px;
+    background: #fff;
+    font-size: 13px;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.15s;
+    color: #2d3436;
+  }
+  .scenario-btn:hover {
+    background: #dfe6e9;
+    border-color: #b2bec3;
+  }
+  .scenario-btn .scenario-desc {
+    font-size: 11px;
+    color: #636e72;
+    margin-top: 2px;
+  }
+
+  .reset-btn {
+    width: 100%;
+    padding: 10px;
+    border: none;
+    border-radius: 6px;
+    background: #d63031;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .reset-btn:hover { background: #c0392b; }
+
+  .impact-summary {
+    display: none;
+    margin-top: 8px;
+  }
+  .impact-summary.active { display: block; }
+  .impact-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 3px 0;
+    font-size: 12px;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  .impact-item:last-child { border-bottom: none; }
+  .impact-name { color: #636e72; }
+  .impact-change { font-weight: 600; }
+  .impact-change.up { color: #e17055; }
+  .impact-change.down { color: #0984e3; }
+
+  .sensitivity-control {
+    margin-top: 8px;
+  }
+  .sensitivity-control label {
+    font-size: 12px;
+    color: #636e72;
+    display: block;
+    margin-bottom: 4px;
+  }
+  .sensitivity-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .sensitivity-row input { flex: 1; accent-color: #636e72; }
+  .sensitivity-val { font-size: 12px; font-weight: 600; min-width: 28px; text-align: center; }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Interactive Causal Loop Model</h1>
+    <div class="subtitle">Explore how changes ripple through a complex system</div>
+  </div>
+  <div class="attribution">
+    Original diagram: Patti Gravitt, NCI Center for Global Health<br>
+    Interactive model built with AI
+  </div>
+</header>
+
+<div class="main">
+  <div class="canvas-wrap">
+    <canvas id="canvas"></canvas>
+  </div>
+
+  <div class="panel">
+    <section id="instructions">
+      <h3>How to Use</h3>
+      <p>Click any variable to select it, then use the shock slider to explore
+      "what if?" scenarios. The system finds a new equilibrium showing how your
+      change ripples through the network.</p>
+      <p style="margin-top:8px">Adjust connection weights to change the model
+      itself — how strongly one factor influences another.</p>
+      <div class="sensitivity-control">
+        <label>System Sensitivity</label>
+        <div class="sensitivity-row">
+          <input type="range" id="sensitivitySlider" min="0.1" max="2" step="0.1" value="1">
+          <span class="sensitivity-val" id="sensitivityVal">1.0</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="node-detail" id="nodeDetail">
+      <div class="node-name" id="nodeName"></div>
+      <div class="domain-badge" id="domainBadge"></div>
+
+      <div class="value-display">
+        <div class="value-bar-track">
+          <div class="value-bar-fill" id="valueBar"></div>
+        </div>
+        <div class="value-pct" id="valuePct"></div>
+      </div>
+
+      <div class="shock-control">
+        <label>Shock this variable:</label>
+        <div class="shock-row">
+          <span style="font-size:11px;color:#0984e3">-50%</span>
+          <input type="range" id="shockSlider" min="-50" max="50" step="1" value="0">
+          <span style="font-size:11px;color:#e17055">+50%</span>
+        </div>
+        <div style="text-align:center">
+          <span class="shock-value" id="shockVal">0%</span>
+        </div>
+      </div>
+
+      <h3>Incoming Influences</h3>
+      <div class="connections-list" id="incomingList"></div>
+
+      <h3 style="margin-top:12px">Outgoing Effects</h3>
+      <div class="connections-list" id="outgoingList"></div>
+    </section>
+
+    <section>
+      <h3>Scenarios</h3>
+      <div class="scenarios-grid" id="scenarioGrid"></div>
+    </section>
+
+    <section id="impactSection">
+      <h3>Biggest Changes</h3>
+      <div class="impact-summary active" id="impactSummary">
+        <p style="font-size:12px;color:#b2bec3">Apply a shock to see system-wide effects</p>
+      </div>
+    </section>
+
+    <button class="reset-btn" id="resetBtn">Reset All</button>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// DATA — Nodes, Edges, and Domains
+// ============================================================
+
+const DOMAINS = [
+  { id: 'regulation', name: 'Government Regulation', color: '#ffeaa7', colorDark: '#fdcb6e', textColor: '#7d6608' },
+  { id: 'economics', name: 'Economics', color: '#bee5fd', colorDark: '#74b9ff', textColor: '#0c5690' },
+  { id: 'research', name: 'Tobacco Research', color: '#b8e6c8', colorDark: '#55efc4', textColor: '#0a6629' },
+  { id: 'control', name: 'Tobacco Control Programs', color: '#fab1a0', colorDark: '#e17055', textColor: '#7c2d12' },
+  { id: 'behavior', name: 'Individual Behavior', color: '#dcc6f0', colorDark: '#a29bfe', textColor: '#4a2d7a' },
+  { id: 'industry', name: 'Tobacco Industry', color: '#fdd9b5', colorDark: '#e17055', textColor: '#7c4a1e' },
+];
+
+const DOMAIN_MAP = {};
+DOMAINS.forEach(d => DOMAIN_MAP[d.id] = d);
+
+const NODES = [
+  // Government Regulation
+  { id: 0,  label: 'Other health\npriorities', fullName: 'Perceived importance to focus on other health programs', domain: 'regulation', x: 0.10, y: 0.06 },
+  { id: 1,  label: 'Gov. willingness\nto legislate', fullName: 'Government willingness to legislate tobacco control', domain: 'regulation', x: 0.28, y: 0.10 },
+  { id: 2,  label: 'Antismoking\nlegislation', fullName: 'Antismoking legislation', domain: 'regulation', x: 0.05, y: 0.38 },
+  { id: 3,  label: 'Protobacco\nconstituencies', fullName: 'Protobacco constituencies', domain: 'regulation', x: 0.14, y: 0.28 },
+  { id: 4,  label: 'Gov. awareness\nof health risk', fullName: 'Government awareness of tobacco health risk', domain: 'regulation', x: 0.27, y: 0.26 },
+
+  // Economics
+  { id: 5,  label: 'Tobacco\ntaxes', fullName: 'Tobacco taxes', domain: 'economics', x: 0.44, y: 0.08 },
+  { id: 6,  label: 'Tax revenues\nfrom smokers', fullName: 'Tax revenues from smokers', domain: 'economics', x: 0.56, y: 0.08 },
+  { id: 7,  label: 'Gov. income\nfrom taxes', fullName: 'Government income from tobacco taxes', domain: 'economics', x: 0.70, y: 0.08 },
+
+  // Tobacco Research
+  { id: 8,  label: 'Antitobacco\nconstituencies', fullName: 'Antitobacco constituencies', domain: 'research', x: 0.40, y: 0.22 },
+  { id: 9,  label: 'Researchers\'\nawareness', fullName: 'Researchers\' awareness of tobacco health risk', domain: 'research', x: 0.52, y: 0.30 },
+  { id: 10, label: 'Research\nfunding', fullName: 'Funding for tobacco health research', domain: 'research', x: 0.64, y: 0.26 },
+
+  // Tobacco Control Programs
+  { id: 11, label: 'Gov. funding\nfor control', fullName: 'Government funding of tobacco control', domain: 'control', x: 0.82, y: 0.16 },
+  { id: 12, label: 'Program\nfunding', fullName: 'Funding for tobacco control programs', domain: 'control', x: 0.88, y: 0.30 },
+  { id: 13, label: 'Control\nprograms', fullName: 'Tobacco control programs', domain: 'control', x: 0.85, y: 0.44 },
+  { id: 14, label: 'Insurers\' quit\ncoverage', fullName: 'Health insurers\' coverage of tobacco quitting costs', domain: 'control', x: 0.74, y: 0.52 },
+  { id: 15, label: 'Public\nawareness', fullName: 'Public awareness of tobacco health risk', domain: 'control', x: 0.62, y: 0.42 },
+  { id: 16, label: 'Pressure to\ncut marketing', fullName: 'Pressure on tobacco companies to reduce marketing activities', domain: 'control', x: 0.62, y: 0.60 },
+
+  // Individual Behavior
+  { id: 17, label: 'Smokers', fullName: 'Smokers', domain: 'behavior', x: 0.42, y: 0.38 },
+  { id: 18, label: 'Fraction\nsmoking', fullName: 'Fraction of people smoking', domain: 'behavior', x: 0.36, y: 0.48 },
+  { id: 19, label: 'People\nstarting', fullName: 'People starting smoking', domain: 'behavior', x: 0.44, y: 0.55 },
+  { id: 20, label: 'People\nquitting', fullName: 'People quitting smoking', domain: 'behavior', x: 0.55, y: 0.48 },
+  { id: 21, label: 'Smoking as\nsocial norm', fullName: 'Smoking as a social norm', domain: 'behavior', x: 0.38, y: 0.62 },
+  { id: 22, label: 'Health care\ncosts', fullName: 'Health care costs', domain: 'behavior', x: 0.32, y: 0.34 },
+
+  // Tobacco Industry
+  { id: 23, label: 'Tobacco\nrevenues', fullName: 'Tobacco company revenues', domain: 'industry', x: 0.20, y: 0.48 },
+  { id: 24, label: 'Tobacco\ngrowers', fullName: 'Tobacco growers', domain: 'industry', x: 0.14, y: 0.62 },
+  { id: 25, label: 'Tobacco\nmarketing', fullName: 'Tobacco marketing activities', domain: 'industry', x: 0.28, y: 0.68 },
+  { id: 26, label: 'Product\navailability', fullName: 'Tobacco products availability', domain: 'industry', x: 0.44, y: 0.72 },
+];
+
+// Initialize node state
+NODES.forEach(n => {
+  n.value = 0.5;
+  n.shocked = false;
+  n.shockAmount = 0;
+  n.width = 0;
+  n.height = 0;
+});
+
+const EDGES = [
+  // Government Regulation internal
+  { from: 0, to: 1, polarity: -1, weight: 0.4 },   // other priorities suppress willingness
+  { from: 4, to: 1, polarity: 1, weight: 0.4 },    // awareness boosts willingness
+  { from: 3, to: 1, polarity: -1, weight: 0.4 },   // protobacco suppresses willingness
+  { from: 8, to: 1, polarity: 1, weight: 0.3 },    // antitobacco boosts willingness
+  { from: 1, to: 2, polarity: 1, weight: 0.5 },    // willingness -> legislation
+  { from: 1, to: 5, polarity: 1, weight: 0.5 },    // willingness -> taxes
+
+  // Economics chain
+  { from: 5, to: 6, polarity: 1, weight: 0.6 },    // taxes -> tax revenues
+  { from: 6, to: 7, polarity: 1, weight: 0.6 },    // tax revenues -> gov income
+  { from: 7, to: 11, polarity: 1, weight: 0.5 },   // gov income -> gov funding
+
+  // Research pathway
+  { from: 8, to: 4, polarity: 1, weight: 0.3 },    // antitobacco -> gov awareness
+  { from: 11, to: 10, polarity: 1, weight: 0.5 },  // gov funding -> research funding
+  { from: 10, to: 9, polarity: 1, weight: 0.5 },   // research funding -> researchers awareness
+  { from: 9, to: 15, polarity: 1, weight: 0.4 },   // researchers awareness -> public awareness
+
+  // Control programs pathway
+  { from: 11, to: 12, polarity: 1, weight: 0.5 },  // gov funding -> program funding
+  { from: 12, to: 13, polarity: 1, weight: 0.5 },  // program funding -> control programs
+  { from: 13, to: 15, polarity: 1, weight: 0.4 },  // control programs -> public awareness
+  { from: 13, to: 16, polarity: 1, weight: 0.4 },  // control programs -> pressure to cut marketing
+
+  // Public awareness effects
+  { from: 15, to: 20, polarity: 1, weight: 0.4 },  // public awareness -> quitting
+  { from: 15, to: 19, polarity: -1, weight: 0.3 }, // public awareness -> less starting
+  { from: 15, to: 8, polarity: 1, weight: 0.3 },   // public awareness -> antitobacco constituencies
+
+  // Insurance
+  { from: 14, to: 20, polarity: 1, weight: 0.3 },  // insurers -> quitting
+
+  // Individual behavior
+  { from: 19, to: 17, polarity: 1, weight: 0.5 },  // starting -> smokers
+  { from: 20, to: 17, polarity: -1, weight: 0.5 }, // quitting -> fewer smokers
+  { from: 17, to: 18, polarity: 1, weight: 0.6 },  // smokers -> fraction
+  { from: 18, to: 21, polarity: 1, weight: 0.4 },  // fraction -> social norm
+  { from: 21, to: 19, polarity: 1, weight: 0.4 },  // social norm -> starting
+  { from: 18, to: 22, polarity: 1, weight: 0.4 },  // fraction -> health costs
+
+  // Health care costs feedback
+  { from: 22, to: 4, polarity: 1, weight: 0.3 },   // health costs -> gov awareness
+  { from: 22, to: 9, polarity: 1, weight: 0.3 },   // health costs -> researchers awareness
+
+  // Tobacco industry
+  { from: 18, to: 23, polarity: 1, weight: 0.5 },  // fraction -> revenues
+  { from: 23, to: 3, polarity: 1, weight: 0.4 },   // revenues -> protobacco
+  { from: 23, to: 24, polarity: 1, weight: 0.4 },  // revenues -> growers
+  { from: 23, to: 25, polarity: 1, weight: 0.4 },  // revenues -> marketing
+  { from: 25, to: 26, polarity: 1, weight: 0.5 },  // marketing -> products
+  { from: 25, to: 19, polarity: 1, weight: 0.4 },  // marketing -> starting
+  { from: 26, to: 19, polarity: 1, weight: 0.3 },  // products -> starting
+
+  // Legislation effects
+  { from: 2, to: 25, polarity: -1, weight: 0.4 },  // legislation -> less marketing
+  { from: 2, to: 26, polarity: -1, weight: 0.3 },  // legislation -> less products
+
+  // Pressure effects
+  { from: 16, to: 25, polarity: -1, weight: 0.4 }, // pressure -> less marketing
+];
+
+const SCENARIOS = [
+  {
+    name: 'Raise Tobacco Taxes',
+    desc: 'Government doubles tobacco tax rate',
+    shocks: [{ node: 5, amount: 40 }]
+  },
+  {
+    name: 'Ban All Marketing',
+    desc: 'Complete prohibition of tobacco advertising',
+    shocks: [{ node: 25, amount: -45 }, { node: 26, amount: -20 }]
+  },
+  {
+    name: 'Major Public Health Campaign',
+    desc: 'Large-scale awareness and cessation programs',
+    shocks: [{ node: 13, amount: 40 }, { node: 14, amount: 30 }]
+  },
+  {
+    name: 'Industry Lobbying Surge',
+    desc: 'Tobacco industry massively increases political influence',
+    shocks: [{ node: 3, amount: 40 }, { node: 25, amount: 30 }]
+  },
+  {
+    name: 'Social Norm Shift',
+    desc: 'Cultural change makes smoking deeply unfashionable',
+    shocks: [{ node: 21, amount: -40 }]
+  },
+  {
+    name: 'Combined Policy',
+    desc: 'Taxes + marketing ban + health campaigns together',
+    shocks: [{ node: 5, amount: 35 }, { node: 25, amount: -40 }, { node: 13, amount: 35 }]
+  },
+];
+
+// ============================================================
+// STATE
+// ============================================================
+let selectedNode = -1;
+let hoveredNode = -1;
+let canvasW = 0, canvasH = 0;
+let sensitivity = 1.0;
+
+// ============================================================
+// SIMULATION
+// ============================================================
+
+function solveEquilibrium() {
+  // Reset values
+  NODES.forEach(n => n.value = 0.5);
+
+  for (let iter = 0; iter < 600; iter++) {
+    let maxDelta = 0;
+    const newVals = NODES.map(n => n.value);
+
+    for (let i = 0; i < NODES.length; i++) {
+      const node = NODES[i];
+
+      if (node.shocked) {
+        const target = 0.5 + node.shockAmount / 100;
+        const d = target - newVals[i];
+        newVals[i] += 0.3 * d;
+        continue;
+      }
+
+      // Gather weighted inputs
+      let inputSum = 0;
+      for (const edge of EDGES) {
+        if (edge.to === i) {
+          inputSum += edge.weight * edge.polarity * sensitivity * (NODES[edge.from].value - 0.5);
+        }
+      }
+
+      // Use tanh for soft clamping
+      const target = 0.5 + 0.48 * Math.tanh(inputSum * 2.5);
+      const d = target - newVals[i];
+      newVals[i] += 0.12 * d;
+      maxDelta = Math.max(maxDelta, Math.abs(0.12 * d));
+    }
+
+    NODES.forEach((n, i) => n.value = Math.max(0.02, Math.min(0.98, newVals[i])));
+    if (maxDelta < 0.00005) break;
+  }
+}
+
+// ============================================================
+// CANVAS SETUP & RENDERING
+// ============================================================
+
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+
+function resize() {
+  const wrap = canvas.parentElement;
+  const dpr = window.devicePixelRatio || 1;
+  canvasW = wrap.clientWidth;
+  canvasH = wrap.clientHeight;
+  canvas.width = canvasW * dpr;
+  canvas.height = canvasH * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  measureNodes();
+  render();
+}
+
+function measureNodes() {
+  ctx.font = '11px "Segoe UI", system-ui, sans-serif';
+  NODES.forEach(n => {
+    const lines = n.label.split('\n');
+    let maxW = 0;
+    lines.forEach(l => { maxW = Math.max(maxW, ctx.measureText(l).width); });
+    n.width = maxW + 24;
+    n.height = lines.length * 15 + 16;
+  });
+}
+
+function nodeScreenPos(n) {
+  return { x: n.x * canvasW, y: n.y * canvasH };
+}
+
+function deviationColor(value) {
+  const dev = value - 0.5;
+  if (Math.abs(dev) < 0.01) return '#f8f9fa';
+  if (dev > 0) {
+    const t = Math.min(dev / 0.45, 1);
+    const r = Math.round(255 - t * 30);
+    const g = Math.round(249 - t * 130);
+    const b = Math.round(250 - t * 180);
+    return `rgb(${r},${g},${b})`;
+  } else {
+    const t = Math.min(-dev / 0.45, 1);
+    const r = Math.round(240 - t * 100);
+    const g = Math.round(248 - t * 70);
+    const b = Math.round(255);
+    return `rgb(${r},${g},${b})`;
+  }
+}
+
+function deviationTextColor(value) {
+  const dev = value - 0.5;
+  if (dev > 0.15) return '#c0392b';
+  if (dev < -0.15) return '#0984e3';
+  return '#2d3436';
+}
+
+// Draw domain backgrounds as soft ellipses
+function drawDomains() {
+  const domainPositions = {
+    regulation: { cx: 0.18, cy: 0.20, rx: 0.22, ry: 0.24 },
+    economics:  { cx: 0.58, cy: 0.10, rx: 0.22, ry: 0.10 },
+    research:   { cx: 0.52, cy: 0.26, rx: 0.18, ry: 0.12 },
+    control:    { cx: 0.78, cy: 0.38, rx: 0.20, ry: 0.28 },
+    behavior:   { cx: 0.43, cy: 0.52, rx: 0.18, ry: 0.20 },
+    industry:   { cx: 0.24, cy: 0.60, rx: 0.20, ry: 0.18 },
+  };
+
+  for (const d of DOMAINS) {
+    const dp = domainPositions[d.id];
+    if (!dp) continue;
+    ctx.save();
+    ctx.globalAlpha = 0.15;
+    ctx.fillStyle = d.color;
+    ctx.beginPath();
+    ctx.ellipse(dp.cx * canvasW, dp.cy * canvasH, dp.rx * canvasW, dp.ry * canvasH, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 0.35;
+    ctx.font = 'bold 13px "Segoe UI", system-ui, sans-serif';
+    ctx.fillStyle = d.textColor;
+    ctx.textAlign = 'center';
+    ctx.fillText(d.name, dp.cx * canvasW, (dp.cy - dp.ry + 0.03) * canvasH);
+    ctx.restore();
+  }
+}
+
+function drawEdge(edge, highlight) {
+  const from = NODES[edge.from];
+  const to = NODES[edge.to];
+  const p1 = nodeScreenPos(from);
+  const p2 = nodeScreenPos(to);
+
+  // Control point: offset perpendicular to the line
+  const dx = p2.x - p1.x;
+  const dy = p2.y - p1.y;
+  const dist = Math.sqrt(dx * dx + dy * dy);
+  const nx = -dy / dist;
+  const ny = dx / dist;
+
+  // Check for reverse edge — if so, curve more
+  const hasReverse = EDGES.some(e => e.from === edge.to && e.to === edge.from);
+  const curvature = hasReverse ? 0.25 : 0.12;
+  const cpx = (p1.x + p2.x) / 2 + nx * dist * curvature;
+  const cpy = (p1.y + p2.y) / 2 + ny * dist * curvature;
+
+  // Clip to node boundaries
+  const startPt = clipToNode(from, p1, { x: cpx, y: cpy });
+  const endPt = clipToNode(to, p2, { x: cpx, y: cpy });
+
+  ctx.save();
+
+  const isPositive = edge.polarity > 0;
+  const baseColor = isPositive ? '#00b894' : '#d63031';
+  const alpha = highlight ? 0.9 : 0.3;
+  const lineWidth = highlight ? 2.2 : 1.2;
+
+  ctx.globalAlpha = alpha;
+  ctx.strokeStyle = baseColor;
+  ctx.lineWidth = lineWidth;
+  ctx.beginPath();
+  ctx.moveTo(startPt.x, startPt.y);
+  ctx.quadraticCurveTo(cpx, cpy, endPt.x, endPt.y);
+  ctx.stroke();
+
+  // Arrowhead
+  const tangentX = endPt.x - cpx;
+  const tangentY = endPt.y - cpy;
+  const angle = Math.atan2(tangentY, tangentX);
+  const aLen = highlight ? 10 : 7;
+
+  ctx.fillStyle = baseColor;
+  ctx.beginPath();
+  ctx.moveTo(endPt.x, endPt.y);
+  ctx.lineTo(endPt.x - aLen * Math.cos(angle - 0.4), endPt.y - aLen * Math.sin(angle - 0.4));
+  ctx.lineTo(endPt.x - aLen * Math.cos(angle + 0.4), endPt.y - aLen * Math.sin(angle + 0.4));
+  ctx.closePath();
+  ctx.fill();
+
+  // Polarity label at midpoint of curve
+  if (highlight) {
+    const mt = 0.5;
+    const mx = (1 - mt) * (1 - mt) * startPt.x + 2 * (1 - mt) * mt * cpx + mt * mt * endPt.x;
+    const my = (1 - mt) * (1 - mt) * startPt.y + 2 * (1 - mt) * mt * cpy + mt * mt * endPt.y;
+    ctx.globalAlpha = 1;
+    ctx.font = 'bold 13px "Segoe UI", system-ui, sans-serif';
+    ctx.fillStyle = baseColor;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(isPositive ? '+' : '\u2013', mx + nx * 8, my + ny * 8);
+  }
+
+  ctx.restore();
+}
+
+function clipToNode(node, center, target) {
+  const hw = node.width / 2 + 2;
+  const hh = node.height / 2 + 2;
+  const dx = target.x - center.x;
+  const dy = target.y - center.y;
+
+  // Find intersection with node rectangle
+  let tMin = Infinity;
+  if (dx !== 0) {
+    const t1 = hw / Math.abs(dx);
+    const t2 = -hw / Math.abs(dx);
+    const t = dx > 0 ? -hw / dx : hw / dx;
+    // Check both sides
+    for (const side of [hw, -hw]) {
+      const tt = -side / dx;
+      if (tt > 0) {
+        const iy = dy * tt;
+        if (Math.abs(iy) <= hh && tt < tMin) tMin = tt;
+      }
+    }
+  }
+  if (dy !== 0) {
+    for (const side of [hh, -hh]) {
+      const tt = -side / dy;
+      if (tt > 0) {
+        const ix = dx * tt;
+        if (Math.abs(ix) <= hw && tt < tMin) tMin = tt;
+      }
+    }
+  }
+
+  if (tMin === Infinity) return center;
+  // Go from center toward target, stopping at edge
+  const dirX = target.x - center.x;
+  const dirY = target.y - center.y;
+  const dirLen = Math.sqrt(dirX * dirX + dirY * dirY);
+  return {
+    x: center.x - (dirX / dirLen) * Math.min(hw, hh) * 0.9,
+    y: center.y - (dirY / dirLen) * Math.min(hw, hh) * 0.9,
+  };
+}
+
+function drawNode(node, index) {
+  const pos = nodeScreenPos(node);
+  const hw = node.width / 2;
+  const hh = node.height / 2;
+  const isSelected = index === selectedNode;
+  const isHovered = index === hoveredNode;
+  const isConnected = selectedNode >= 0 && EDGES.some(
+    e => (e.from === selectedNode && e.to === index) || (e.to === selectedNode && e.from === index)
+  );
+
+  ctx.save();
+
+  // Shadow
+  if (isSelected || isHovered) {
+    ctx.shadowColor = 'rgba(0,0,0,0.15)';
+    ctx.shadowBlur = 8;
+    ctx.shadowOffsetY = 2;
+  }
+
+  // Background
+  const fillColor = deviationColor(node.value);
+  ctx.fillStyle = fillColor;
+  ctx.strokeStyle = isSelected ? '#6c5ce7' : isHovered ? '#a29bfe' : isConnected ? '#74b9ff' : '#b2bec3';
+  ctx.lineWidth = isSelected ? 2.5 : isHovered ? 2 : isConnected ? 1.8 : 1;
+
+  roundRect(ctx, pos.x - hw, pos.y - hh, node.width, node.height, 6);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.shadowColor = 'transparent';
+
+  // Deviation indicator bar at bottom
+  const dev = node.value - 0.5;
+  if (Math.abs(dev) > 0.01) {
+    const barW = (Math.abs(dev) / 0.5) * hw;
+    const barColor = dev > 0 ? 'rgba(225,112,85,0.5)' : 'rgba(9,132,227,0.5)';
+    ctx.fillStyle = barColor;
+    const barX = dev > 0 ? pos.x : pos.x - barW;
+    ctx.fillRect(barX, pos.y + hh - 4, barW, 3);
+  }
+
+  // Text
+  ctx.fillStyle = deviationTextColor(node.value);
+  ctx.font = '11px "Segoe UI", system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  const lines = node.label.split('\n');
+  const lineH = 14;
+  const startY = pos.y - ((lines.length - 1) * lineH) / 2;
+  lines.forEach((line, li) => {
+    ctx.fillText(line, pos.x, startY + li * lineH);
+  });
+
+  // Deviation percentage label
+  if (Math.abs(dev) > 0.02) {
+    const pct = Math.round(dev * 200);
+    const sign = pct > 0 ? '+' : '';
+    ctx.font = 'bold 10px "Segoe UI", system-ui, sans-serif';
+    ctx.fillStyle = dev > 0 ? '#d63031' : '#0984e3';
+    ctx.textAlign = 'center';
+    ctx.fillText(sign + pct + '%', pos.x, pos.y - hh - 6);
+  }
+
+  ctx.restore();
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.arcTo(x + w, y, x + w, y + r, r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
+  ctx.lineTo(x + r, y + h);
+  ctx.arcTo(x, y + h, x, y + h - r, r);
+  ctx.lineTo(x, y + r);
+  ctx.arcTo(x, y, x + r, y, r);
+  ctx.closePath();
+}
+
+function render() {
+  ctx.clearRect(0, 0, canvasW, canvasH);
+
+  // Domain backgrounds
+  drawDomains();
+
+  // Edges — non-highlighted first, then highlighted
+  const connectedEdges = new Set();
+  if (selectedNode >= 0) {
+    EDGES.forEach((e, i) => {
+      if (e.from === selectedNode || e.to === selectedNode) connectedEdges.add(i);
+    });
+  }
+  if (hoveredNode >= 0 && hoveredNode !== selectedNode) {
+    EDGES.forEach((e, i) => {
+      if (e.from === hoveredNode || e.to === hoveredNode) connectedEdges.add(i);
+    });
+  }
+
+  EDGES.forEach((e, i) => {
+    if (!connectedEdges.has(i)) drawEdge(e, false);
+  });
+  EDGES.forEach((e, i) => {
+    if (connectedEdges.has(i)) drawEdge(e, true);
+  });
+
+  // Nodes
+  NODES.forEach((n, i) => drawNode(n, i));
+}
+
+// ============================================================
+// HIT TESTING & INTERACTION
+// ============================================================
+
+function getNodeAt(mx, my) {
+  // Check in reverse order (top nodes first)
+  for (let i = NODES.length - 1; i >= 0; i--) {
+    const n = NODES[i];
+    const pos = nodeScreenPos(n);
+    if (Math.abs(mx - pos.x) <= n.width / 2 + 4 && Math.abs(my - pos.y) <= n.height / 2 + 4) {
+      return i;
+    }
+  }
+  return -1;
+}
+
+canvas.addEventListener('mousemove', (e) => {
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+  const hit = getNodeAt(mx, my);
+  if (hit !== hoveredNode) {
+    hoveredNode = hit;
+    canvas.style.cursor = hit >= 0 ? 'pointer' : 'default';
+    render();
+  }
+});
+
+canvas.addEventListener('click', (e) => {
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+  const hit = getNodeAt(mx, my);
+  selectNode(hit);
+});
+
+canvas.addEventListener('mouseleave', () => {
+  if (hoveredNode !== -1) {
+    hoveredNode = -1;
+    render();
+  }
+});
+
+function selectNode(index) {
+  selectedNode = index;
+  updatePanel();
+  render();
+}
+
+// ============================================================
+// PANEL
+// ============================================================
+
+const nodeDetailEl = document.getElementById('nodeDetail');
+const nodeNameEl = document.getElementById('nodeName');
+const domainBadgeEl = document.getElementById('domainBadge');
+const valueBarEl = document.getElementById('valueBar');
+const valuePctEl = document.getElementById('valuePct');
+const shockSliderEl = document.getElementById('shockSlider');
+const shockValEl = document.getElementById('shockVal');
+const incomingListEl = document.getElementById('incomingList');
+const outgoingListEl = document.getElementById('outgoingList');
+const impactSummaryEl = document.getElementById('impactSummary');
+const sensitivitySliderEl = document.getElementById('sensitivitySlider');
+const sensitivityValEl = document.getElementById('sensitivityVal');
+
+function updatePanel() {
+  if (selectedNode < 0) {
+    nodeDetailEl.classList.remove('active');
+    return;
+  }
+
+  const node = NODES[selectedNode];
+  const domain = DOMAIN_MAP[node.domain];
+
+  nodeDetailEl.classList.add('active');
+  nodeNameEl.textContent = node.fullName;
+  domainBadgeEl.textContent = domain.name;
+  domainBadgeEl.style.background = domain.color;
+  domainBadgeEl.style.color = domain.textColor;
+
+  // Value display
+  const dev = node.value - 0.5;
+  const pct = Math.round(dev * 200);
+  valuePctEl.textContent = (pct > 0 ? '+' : '') + pct + '%';
+  valuePctEl.style.color = dev > 0 ? '#d63031' : dev < 0 ? '#0984e3' : '#636e72';
+  valueBarEl.style.width = (node.value * 100) + '%';
+  valueBarEl.style.background = dev > 0 ? '#e17055' : dev < 0 ? '#74b9ff' : '#dfe6e9';
+
+  // Shock slider
+  shockSliderEl.value = node.shockAmount;
+  shockValEl.textContent = (node.shockAmount > 0 ? '+' : '') + node.shockAmount + '%';
+
+  // Incoming connections
+  incomingListEl.innerHTML = '';
+  EDGES.forEach((edge, ei) => {
+    if (edge.to !== selectedNode) return;
+    const fromNode = NODES[edge.from];
+    const item = document.createElement('div');
+    item.className = 'conn-item';
+    item.innerHTML = `
+      <span class="conn-polarity ${edge.polarity > 0 ? 'pos' : 'neg'}">${edge.polarity > 0 ? '+' : '\u2013'}</span>
+      <span class="conn-name" data-node="${edge.from}">${fromNode.fullName}</span>
+      <span class="conn-weight"><input type="range" min="0" max="100" value="${Math.round(edge.weight * 100)}" data-edge="${ei}" title="Weight: ${Math.round(edge.weight * 100)}%"></span>
+    `;
+    incomingListEl.appendChild(item);
+  });
+
+  // Outgoing connections
+  outgoingListEl.innerHTML = '';
+  EDGES.forEach((edge, ei) => {
+    if (edge.from !== selectedNode) return;
+    const toNode = NODES[edge.to];
+    const item = document.createElement('div');
+    item.className = 'conn-item';
+    item.innerHTML = `
+      <span class="conn-polarity ${edge.polarity > 0 ? 'pos' : 'neg'}">${edge.polarity > 0 ? '+' : '\u2013'}</span>
+      <span class="conn-name" data-node="${edge.to}">${toNode.fullName}</span>
+      <span class="conn-weight"><input type="range" min="0" max="100" value="${Math.round(edge.weight * 100)}" data-edge="${ei}" title="Weight: ${Math.round(edge.weight * 100)}%"></span>
+    `;
+    outgoingListEl.appendChild(item);
+  });
+
+  // Click-to-navigate on connection names
+  document.querySelectorAll('.conn-name').forEach(el => {
+    el.addEventListener('click', () => {
+      selectNode(parseInt(el.dataset.node));
+    });
+  });
+
+  // Weight sliders
+  document.querySelectorAll('.conn-weight input').forEach(el => {
+    el.addEventListener('input', () => {
+      const ei = parseInt(el.dataset.edge);
+      EDGES[ei].weight = parseInt(el.value) / 100;
+      el.title = 'Weight: ' + el.value + '%';
+      solveEquilibrium();
+      updateImpactSummary();
+      updatePanel();
+      render();
+    });
+  });
+}
+
+// Shock slider handler
+shockSliderEl.addEventListener('input', () => {
+  if (selectedNode < 0) return;
+  const amount = parseInt(shockSliderEl.value);
+  NODES[selectedNode].shockAmount = amount;
+  NODES[selectedNode].shocked = amount !== 0;
+  shockValEl.textContent = (amount > 0 ? '+' : '') + amount + '%';
+  solveEquilibrium();
+  updateImpactSummary();
+  updatePanel();
+  render();
+});
+
+// Sensitivity slider
+sensitivitySliderEl.addEventListener('input', () => {
+  sensitivity = parseFloat(sensitivitySliderEl.value);
+  sensitivityValEl.textContent = sensitivity.toFixed(1);
+  solveEquilibrium();
+  updateImpactSummary();
+  if (selectedNode >= 0) updatePanel();
+  render();
+});
+
+// ============================================================
+// IMPACT SUMMARY
+// ============================================================
+
+function updateImpactSummary() {
+  const hasShocks = NODES.some(n => n.shocked);
+  if (!hasShocks) {
+    impactSummaryEl.innerHTML = '<p style="font-size:12px;color:#b2bec3">Apply a shock to see system-wide effects</p>';
+    return;
+  }
+
+  // Find top changes
+  const changes = NODES.map((n, i) => ({
+    index: i,
+    name: n.fullName,
+    dev: n.value - 0.5,
+    pct: Math.round((n.value - 0.5) * 200),
+    shocked: n.shocked
+  }))
+  .filter(c => Math.abs(c.pct) >= 1 && !c.shocked)
+  .sort((a, b) => Math.abs(b.pct) - Math.abs(a.pct))
+  .slice(0, 8);
+
+  if (changes.length === 0) {
+    impactSummaryEl.innerHTML = '<p style="font-size:12px;color:#b2bec3">No significant downstream effects</p>';
+    return;
+  }
+
+  impactSummaryEl.innerHTML = changes.map(c => `
+    <div class="impact-item">
+      <span class="impact-name">${c.name}</span>
+      <span class="impact-change ${c.pct > 0 ? 'up' : 'down'}">${c.pct > 0 ? '+' : ''}${c.pct}%</span>
+    </div>
+  `).join('');
+}
+
+// ============================================================
+// SCENARIOS
+// ============================================================
+
+const scenarioGrid = document.getElementById('scenarioGrid');
+SCENARIOS.forEach((scenario, si) => {
+  const btn = document.createElement('button');
+  btn.className = 'scenario-btn';
+  btn.innerHTML = `<strong>${scenario.name}</strong><div class="scenario-desc">${scenario.desc}</div>`;
+  btn.addEventListener('click', () => {
+    resetAll();
+    scenario.shocks.forEach(s => {
+      NODES[s.node].shocked = true;
+      NODES[s.node].shockAmount = s.amount;
+    });
+    solveEquilibrium();
+    updateImpactSummary();
+    // Select the first shocked node
+    selectNode(scenario.shocks[0].node);
+  });
+  scenarioGrid.appendChild(btn);
+});
+
+// Reset
+document.getElementById('resetBtn').addEventListener('click', () => {
+  resetAll();
+  selectedNode = -1;
+  updatePanel();
+  updateImpactSummary();
+  render();
+});
+
+function resetAll() {
+  NODES.forEach(n => {
+    n.value = 0.5;
+    n.shocked = false;
+    n.shockAmount = 0;
+  });
+  // Reset edge weights
+  EDGES.forEach(e => {
+    // Keep original weights — don't reset those
+  });
+}
+
+// ============================================================
+// INIT
+// ============================================================
+
+window.addEventListener('resize', resize);
+resize();
+solveEquilibrium();
+render();
+</script>
+</body>
+</html>
