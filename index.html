@@ -538,6 +538,7 @@ function solveEquilibrium() {
         const target = 0.5 + node.shockAmount / 100;
         const d = target - newVals[i];
         newVals[i] += 0.3 * d;
+        maxDelta = Math.max(maxDelta, Math.abs(0.3 * d));
         continue;
       }
 
